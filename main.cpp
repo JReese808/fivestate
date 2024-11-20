@@ -57,10 +57,12 @@ int main(int argc, char* argv[])
 
 
     time = 0;
-//    processorAvailable = true;
+    bool processorAvailable = true;
+    long unsigned int totalCompleted = 0;
 
     //keep running the loop until all processes have been added and have run to completion
-    while(processMgmt.moreProcessesComing()  /* TODO add something to keep going as long as there are processes that arent done! */ )
+    while(processMgmt.moreProcessesComing() || totalCompleted < processList.size()
+    /* TODO add something to keep going as long as there are processes that arent done! */ )
     {
         //Update our current time step
         ++time;
@@ -97,7 +99,80 @@ int main(int argc, char* argv[])
         //   <your code here> 
 
 
+        static list<Process>::iterator currProcess = processList.begin();
 
+        if (currProcess->state == processing){
+            // handles complete processes
+            if(currProcess->processorTime >= currProcess->reqProcessorTime){
+                stepAction = complete;
+                currProcess->state = done;
+                currProcess->doneTime = time;
+                totalCompleted++;
+                processorAvailable = true;
+                currProcess++;
+            }
+
+            // handles io requests
+            else if(currProcess->processorTime == currProcess->ioEvents.front().time){
+                stepAction = ioRequest;
+                ioModule.submitIORequest(time, currProcess->ioEvents.front(), *currProcess);
+                currProcess->state = blocked;
+                processorAvailable = true;
+                currProcess++;
+            }
+
+            // handles continue processing
+            else {
+                stepAction = continueRun;
+                currProcess->processorTime++;
+            }
+        }
+
+        else if(currProcess->state == newArrival){
+          stepAction = admitNewProc;
+          currProcess->state = ready;
+          currProcess++;
+        }
+
+        else if(next(currProcess)->state == newArrival){
+            ++currProcess;
+            stepAction = admitNewProc;
+            currProcess->state = ready;
+            currProcess++;
+        }
+
+        else if(interrupts.begin() != interrupts.end()){
+            unsigned int processID = interrupts.front().procID;
+            for(Process& val : processList){
+                if(val.id == processID){
+                    stepAction = handleInterrupt;
+                    val.state = ready;
+                    interrupts.pop_front();
+                    break;
+                }
+            }
+        }
+
+        else if(currProcess->state == ready){
+            stepAction = beginRun;
+            currProcess->state = processing;
+            currProcess->processorTime++;
+            processorAvailable = false;
+        }
+
+        if(processorAvailable){
+            if(currProcess == processList.end()){
+                currProcess = processList.begin();
+            }
+            int n = processList.size();
+            while(n > 0 && (currProcess->state == blocked || currProcess->state == done)){
+                currProcess++;
+                if(currProcess == processList.end()){
+                    currProcess = processList.begin();
+                }
+                n--;
+            }
+        }
 
 
 
