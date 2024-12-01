@@ -1,7 +1,63 @@
 #include "processMgmt.h"
 
-void ProcessManagement::readProcessFile(const string& fname)
-{
+// Moves processes from pending to the scheduler at arrival time
+void ProcessManagement::activateProcesses(const int& time){
+    static int iter = allProcesses.size()-1;
+    if(iter > 0){
+        while(allProcesses[iter].arrivalTime == time){
+            m_scheduler.addNewArrival(&allProcesses[iter]);
+            iter--;
+        }
+    }
+}
+
+// Runs at each time step
+stepActionEnum ProcessManagement::runStep(const long& time){
+    // cout << "processMngmt layer starting" << endl;
+    return m_scheduler.runProcesses(time);
+    // cout << "processMngmt layer complete" << endl;
+}
+
+// For debugging only
+void ProcessManagement::printStates(){
+    char stateChar;
+    for(auto & Proc : allProcesses)
+    {
+        switch (Proc.state)
+        {
+            case ready:
+                stateChar = 'r';
+                break;
+            case processing:
+                stateChar = 'p';
+                break;
+            case blocked:
+                stateChar = 'b';
+                break;
+            case newArrival:
+                stateChar = 'n';
+                break;
+            case done:
+                stateChar = 'd';
+                break;
+            case awaiting:
+                stateChar = 'a';
+                break;
+        }
+        cout << stateChar << ' ';
+    }
+    cout << endl;
+}
+
+// For debugging only
+void ProcessManagement::printAllProcesses(){
+    for(auto proc : allProcesses){
+        proc.printProcess();
+    }
+}
+
+// Moves all processes from a file into the allProcesses vector
+void ProcessManagement::readProcessFile(const string& fname){
     stringstream ss;
     ifstream in(fname.c_str());
     string line, strItem;
@@ -9,18 +65,14 @@ void ProcessManagement::readProcessFile(const string& fname)
     unsigned int ioIDctrl(0), procIDctrl(0);
     int ioTime, ioDur;
 
-    m_pending.clear();
-
-    if(!in.good())
-    {
+    allProcesses.clear();
+    if(!in.good()){
         cerr << "initProcessSetFromFile error     unable to open file \"" << fname << "\"" << endl;
         return;
     }
 
-    m_pending.reserve(20);
-
-    while(getline(in, line))
-    {
+    allProcesses.reserve(20);
+    while(getline(in, line)){
         ss.clear();
         ss.str(line);
 
@@ -28,33 +80,9 @@ void ProcessManagement::readProcessFile(const string& fname)
         ++procIDctrl;
 
         ss >> proc.arrivalTime;
-
         ss >> proc.reqProcessorTime;
-
-        proc.ioEvents.clear();
-        while(ss >> ioTime)
-        {
-            ss >> ioDur;
-
-            proc.ioEvents.push_back(IOEvent(ioTime, ioDur, ioIDctrl));
-            ++ioIDctrl;
-        }
-        proc.ioEvents.sort(ioComp);
-
-        m_pending.push_back(proc);
+        allProcesses.push_back(proc);
     }
 
-    sort(m_pending.begin(), m_pending.end(), procComp);
-}
-
-void ProcessManagement::activateProcesses(const int& time)
-{
-    if(m_pending.size() > 0)
-    {
-        while(m_pending.back().arrivalTime == time)
-        {
-            m_procList.push_back(m_pending.back());
-            m_pending.pop_back();
-        }
-    }
+    sort(allProcesses.begin(), allProcesses.end(), procComp);
 }

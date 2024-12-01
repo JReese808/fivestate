@@ -1,38 +1,39 @@
 #ifndef PROCESS_MGMT_H
 #define PROCESS_MGMT_H
 
-#include<vector>
-#include<algorithm>  //for sort
-using namespace std;
+#include <algorithm>  // Needed for sort (used in readProcessFile)
+#include "scheduler.h"
 
-#include "process.h"
 
-inline bool procComp(const Process& p1, const Process& p2)
-{
+// Compares processes by arrival time
+inline bool procComp(const Process& p1, const Process& p2){
     return p1.arrivalTime > p2.arrivalTime;
 }
 
-inline bool ioComp(const IOEvent& e1, const IOEvent& e2)
-{
-    return e1.time < e2.time;
-}
 
-
-class ProcessManagement
-{
+// Admits new processes into the scheduler at arrival time
+class ProcessManagement{
     public:
-      ProcessManagement(list<Process>& procList) : m_procList(procList) {};
+        ProcessManagement(Scheduler mScheduler) : m_scheduler(mScheduler) {};
 
-      void readProcessFile(const string& fname);
+        // Essential class functions
+        void activateProcesses(const int& time);
+        stepActionEnum runStep(const long& time);
+        int numProcesses() {return allProcesses.size();}
 
-      void activateProcesses(const int& time);
+        // Debugging helper
+        void printStates();
+        void printAllProcesses();
 
-      bool moreProcessesComing() {return m_pending.size() != 0;}
-
+        // Temporarily used to move all processes from a file into the allProcesses vector
+        // Will need to be rewritten depending on how processes are inputted by the user
+        void readProcessFile(const string& fname);
     private:
-      vector<Process> m_pending;
-
-      list<Process>& m_procList;
+        // Holds all processes
+        vector<Process> allProcesses;
+        // The scheduler to be used during simulation
+        Scheduler m_scheduler;
 };
+
 
 #endif
