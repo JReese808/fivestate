@@ -5,6 +5,10 @@
         "vector": "cpp",
         "list": "cpp",
         "ostream": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "chrono": "cpp",
+        "forward_list": "cpp",
+        "xstring": "cpp",
+        "xutility": "cpp"
     }
 }
